@@ -70,6 +70,13 @@ class Orchestrator:
                 print(f"   fichiers : {', '.join(record.files)}")
             print(f"   (tokens: {ctx.tokens_used}/{ctx.token_budget})")
 
+            # --- Hook ENTRE-ÉTAPES : effet de bord optionnel (ex: say) --------
+            between, btokens = self.toolbox.between_steps(
+                ctx.goal, ctx.enriched_context(), record.result)
+            ctx.add_tokens(btokens)
+            if between.kind != "none":
+                print(f"   entre-étapes : {between.label}")
+
         return RunReport(
             goal=goal,
             stop_reason=stop_reason,

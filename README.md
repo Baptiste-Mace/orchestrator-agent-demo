@@ -28,6 +28,7 @@ le plan soit terminé **ou** que le budget de tokens soit atteint.
    │  1. SÉLECTION  : une skill / un outil MCP est-il utile ? │  ◄── catalogue skills + MCP
    │  2. EXÉCUTION  : réalise l'étape avec le CONTEXTE ENRICHI │  ◄── plan + étapes faites + fichiers
    │  3. ENRICHIT   : résultat + fichiers créés → contexte     │  ──► réinjecté à l'étape suivante
+   │  4. ENTRE-ÉTAPES : effet de bord optionnel (ex: say)      │  ──► lit le résultat à voix haute
    └────────────────────────────────────────────────────────┘
            │
            ▼
@@ -133,6 +134,23 @@ L'agent planifie, puis pour l'étape « copier » et l'étape « notifier » il 
 lui-même** `mcp:macos/clipboard_set` et `mcp:macos/notify`, en construisant les
 arguments à partir du contexte enrichi (le vrai texte généré à l'étape précédente).
 
+#### Narration entre les étapes (`say`)
+
+En plus de la sélection d'outil **avant** chaque étape, l'agent dispose d'un hook
+**entre-étapes** (`prompts/between_steps.md`) : après chaque étape, il peut déclencher
+un outil à effet de bord. Deux niveaux garantissent que **`say` se lance dès que
+l'objectif demande de raconter / dire / lire à voix haute** :
+
+1. le LLM décide (il peut prononcer le contenu produit) ;
+2. **garantie déterministe** : si l'objectif contient une intention de narration
+   (voir `wants_narration` dans `agent/util.py`) et qu'un outil `/say` existe, l'agent
+   prononce le résultat même si le LLM s'abstient.
+
+```bash
+python run.py "Raconte-moi une mini-histoire en trois parties : début, milieu, fin"
+# -> l'agent lit chaque partie à voix haute entre les étapes
+```
+
 C'est aussi un patron réutilisable : pour créer ton propre MCP, copie ce fichier,
 remplace la liste `TOOLS` et les `HANDLERS`, puis déclare-le dans `mcp_servers.json`.
 
@@ -141,7 +159,7 @@ remplace la liste `TOOLS` et les `HANDLERS`, puis déclare-le dans `mcp_servers.
 ```
 orchestrator-agent-demo/
 ├── run.py                  point d'entrée
-├── prompts/                meta-prompts (planner, executor, tool_selection)
+├── prompts/                meta-prompts (planner, executor, tool_selection, between_steps)
 ├── skills/                 skills locales (registre + fichiers d'instructions)
 ├── mcp_servers.json        serveurs MCP à démarrer
 ├── mcp_servers/

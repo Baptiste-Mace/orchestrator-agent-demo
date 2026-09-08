@@ -6,6 +6,16 @@ from typing import Any, List, Tuple
 
 from .llm import LLMProvider, Message
 
+# Mots-clés qui indiquent que l'utilisateur veut une lecture à voix haute.
+_NARRATION_HINTS = ("racont", "dire", "dis ", "dis-", "à voix haute", "voix haute",
+                    "lis ", "lire", "prononc", "parle", "lecture", "oralement")
+
+
+def wants_narration(text: str) -> bool:
+    """Détecte une intention de « raconter / dire / lire à voix haute »."""
+    low = text.lower()
+    return any(hint in low for hint in _NARRATION_HINTS)
+
 
 def extract_json(text: str) -> Any:
     """Extrait le premier objet JSON d'une réponse LLM.

@@ -11,7 +11,7 @@ from typing import List, Optional
 from .config import SKILLS_DIR, load_prompt
 from .llm import LLMProvider, Message
 from .mcp_client import MCPManager
-from .util import ask_json
+from .util import ask_json, wants_narration
 
 
 @dataclass
@@ -48,6 +48,15 @@ class Toolbox:
         self.mcp = mcp
         self.llm = llm
         self._selection_prompt = load_prompt("tool_selection")
+        self._between_prompt = load_prompt("between_steps")
+
+    def find_mcp_tool(self, suffix: str) -> Optional[str]:
+        """Retourne le nom qualifié d'un outil MCP dont le nom finit par `suffix`
+        (ex: '/say'), sans coder en dur le nom du serveur. None si absent."""
+        for item in self.mcp.catalog():
+            if item["name"].endswith(suffix):
+                return item["name"]
+        return None
 
     def catalog(self) -> List[dict]:
         """Catalogue complet présenté au sélecteur (skills + outils MCP)."""
@@ -100,5 +109,54 @@ class Toolbox:
                 return (ToolChoice(kind="none", name=None,
                                    result=f"(échec outil MCP {name}: {e})"),
                         tokens)
+
+        return ToolChoice(kind="none", name=None), tokens
+
+    def between_steps(self, goal: str, context: str, last_result: str):
+        """Hook exécuté ENTRE deux étapes : permet d'invoquer un outil MCP
+        (typiquement `say`) sans que ce soit lié à l'exécution d'une étape.
+
+        Deux niveaux :
+          1. le LLM décide (prompt between_steps) — n'importe quel outil MCP ;
+          2. garantie déterministe : si l'objectif demande de raconter/dire et
+             qu'un outil `/say` existe, on prononce le résultat même si le LLM
+             a répondu "none". Ainsi `say` se lance de façon fiable.
+
+        Retourne (ToolChoice, tokens_consommés).
+        """
+        catalog = self.mcp.catalog()   # seuls les outils MCP ont un effet de bord
+        if not catalog:
+            return ToolChoice(kind="none", name=None), 0
+
+        catalog_text = json.dumps(catalog, ensure_ascii=False, indent=2)
+        messages = [
+            Message("system", self._between_prompt),
+            Message("user", f"OBJECTIF:\n{goal}\n\nCONTEXTE:\n{context}\n\n"
+                            f"RÉSULTAT DE L'ÉTAPE:\n{last_result}\n\n"
+                            f"CATALOGUE:\n{catalog_text}"),
+        ]
+        decision, tokens = ask_json(self.llm, messages)
+
+        if decision.get("use") == "mcp" and decision.get("name"):
+            name = decision["name"]
+            try:
+                output = self.mcp.call(name, decision.get("arguments", {}))
+                return (ToolChoice(kind="mcp", name=name, result=output,
+                                   label=f"mcp:{name}"), tokens)
+            except Exception as e:
+                return (ToolChoice(kind="none", name=None,
+                                   result=f"(échec outil MCP {name}: {e})"), tokens)
+
+        # Garantie déterministe pour les objectifs de narration.
+        if wants_narration(goal):
+            say_tool = self.find_mcp_tool("/say")
+            if say_tool:
+                try:
+                    self.mcp.call(say_tool, {"text": last_result})
+                    return (ToolChoice(kind="mcp", name=say_tool, result=last_result,
+                                       label=f"mcp:{say_tool}"), tokens)
+                except Exception as e:
+                    return (ToolChoice(kind="none", name=None,
+                                       result=f"(échec say: {e})"), tokens)
 
         return ToolChoice(kind="none", name=None), tokens
