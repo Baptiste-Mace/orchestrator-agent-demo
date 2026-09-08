@@ -159,20 +159,22 @@ remplace la liste `TOOLS` et les `HANDLERS`, puis déclare-le dans `mcp_servers.
 ```
 orchestrator-agent-demo/
 ├── run.py                  point d'entrée
-├── prompts/                meta-prompts (planner, executor, tool_selection, between_steps)
+├── prompts/                meta-prompts (planner, executor, tool_selection,
+│                           between_steps, delegation, meta_prompt)
 ├── skills/                 skills locales (registre + fichiers d'instructions)
 ├── mcp_servers.json        serveurs MCP à démarrer
 ├── mcp_servers/
 │   └── macos_toolkit.py    serveur MCP maison (notify/say/clipboard)
 └── agent/
     ├── config.py           réglages + chargement .env/prompts
-    ├── llm.py              interface LLMProvider + OpenAI/Anthropic/Mock
+    ├── llm.py              interface LLMProvider + OpenAI/Anthropic/Ollama/Mock
     ├── context.py          AgentContext : plan, historique, fichiers, budget tokens
     ├── mcp_client.py       mini-client MCP (JSON-RPC stdio) + manager
     ├── tools.py            catalogue skills+MCP + sélection avant exécution
     ├── planner.py          construit le plan via le LLM
+    ├── metaprompt.py       compose le méta-prompt d'exécution à la volée
     ├── executor.py         exécute une étape avec contexte enrichi + outil éventuel
-    └── orchestrator.py     la boucle et les conditions d'arrêt
+    └── orchestrator.py     la boucle, les conditions d'arrêt et les sous-agents
 ```
 
 ## Conditions d'arrêt
@@ -180,6 +182,33 @@ orchestrator-agent-demo/
 - **Plan terminé** : toutes les étapes ont été exécutées.
 - **Budget de tokens atteint** : `TOKEN_BUDGET` (chaque appel LLM incrémente le compteur).
 - Garde-fou supplémentaire : `MAX_STEPS`.
+
+## Sous-agents (délégation d'une étape)
+
+Certaines étapes ne sont pas atomiques : elles sont en réalité un objectif à part
+entière. Avant d'exécuter une étape, l'agent demande au LLM (`prompts/delegation.md`)
+si elle mérite son propre sous-plan. Si oui, il relance **la même boucle** sur cette
+étape : c'est un **sous-agent**.
+
+- Le sous-agent a son propre budget de tokens (`SUB_AGENT_TOKEN_BUDGET`, borné par le
+  budget restant du parent), et ses tokens sont décomptés du budget du parent.
+- La profondeur de récursion est bornée par `MAX_DEPTH` (par défaut `1`) : pas de
+  récursion infinie.
+- Le sous-agent rend un résultat unique au parent, et les fichiers qu'il crée
+  remontent dans le contexte parent.
+
+L'intérêt n'est pas de multiplier les agents, c'est de découper encore, en gardant
+chaque budget lisible.
+
+## Méta-prompt composé à la volée
+
+Le bon prompt dépend du contexte du moment. Plutôt que de figer le prompt d'exécution
+dans un seul fichier, l'agent peut, avant une étape, demander au LLM
+(`prompts/meta_prompt.md`) s'il faut ajouter une **spécialisation** ciblée (un rôle,
+des points de vigilance, un format). Si c'est utile, ce complément est ajouté au prompt
+de base ; sinon on garde le prompt générique (coût quasi nul).
+
+Réglé par `DYNAMIC_META_PROMPT` (`1` par défaut, `0` pour désactiver).
 
 ## Pour aller plus loin
 

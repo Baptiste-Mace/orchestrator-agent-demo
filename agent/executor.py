@@ -2,20 +2,22 @@
 
 Chaque exécution :
   1. consulte la boîte à outils (skill/MCP pertinent ?) -> contexte enrichi,
-  2. reçoit le contexte enrichi (plan + étapes faites + fichiers),
-  3. produit un résultat et d'éventuels fichiers.
+  2. compose éventuellement un méta-prompt spécialisé pour l'étape,
+  3. reçoit le contexte enrichi (plan + étapes faites + fichiers),
+  4. produit un résultat et d'éventuels fichiers.
 """
 from __future__ import annotations
 
-from .config import load_prompt
+from .config import Config
 from .context import AgentContext, StepRecord
 from .llm import LLMProvider, Message
+from .metaprompt import compose_system_prompt
 from .tools import Toolbox
 from .util import ask_json
 
 
 def execute_step(llm: LLMProvider, toolbox: Toolbox, ctx: AgentContext,
-                 index: int, step: str) -> StepRecord:
+                 index: int, step: str, cfg: Config) -> StepRecord:
     # 1) Sélection éventuelle d'une skill / d'un outil MCP avant l'exécution.
     choice, sel_tokens = toolbox.select_for(step, ctx.enriched_context())
     ctx.add_tokens(sel_tokens)
@@ -26,9 +28,14 @@ def execute_step(llm: LLMProvider, toolbox: Toolbox, ctx: AgentContext,
     elif choice.kind == "mcp":
         tool_block = f"\n\nRÉSULTAT DE L'OUTIL MCP ({choice.name}):\n{choice.result}"
 
-    # 2) Exécution proprement dite, nourrie par le contexte enrichi.
+    # 2) Méta-prompt composé à la volée : le prompt de base, enrichi si utile.
+    system_prompt, specialisation, meta_tokens = compose_system_prompt(
+        llm, ctx, step, enabled=cfg.dynamic_meta_prompt)
+    ctx.add_tokens(meta_tokens)
+
+    # 3) Exécution proprement dite, nourrie par le contexte enrichi.
     messages = [
-        Message("system", load_prompt("executor")),
+        Message("system", system_prompt),
         Message("user",
                 f"{ctx.enriched_context()}\n\n"
                 f"ÉTAPE À RÉALISER MAINTENANT (#{index}):\n{step}{tool_block}"),
@@ -37,7 +44,7 @@ def execute_step(llm: LLMProvider, toolbox: Toolbox, ctx: AgentContext,
     ctx.add_tokens(tokens)
     data = resp_data
 
-    # 3) Écriture des fichiers produits dans le workspace.
+    # 4) Écriture des fichiers produits dans le workspace.
     written = []
     for f in data.get("files", []):
         path = f.get("path")
@@ -53,4 +60,5 @@ def execute_step(llm: LLMProvider, toolbox: Toolbox, ctx: AgentContext,
         tool_used=choice.label,
         files=written,
         notes=data.get("notes", ""),
+        meta_prompt=specialisation,
     )

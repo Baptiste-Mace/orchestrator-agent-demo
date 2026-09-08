@@ -175,6 +175,18 @@ class MockProvider(LLMProvider):
             text = json.dumps({"use": "none", "name": None,
                                "arguments": {}, "reason": "Mock: aucun outil requis."},
                               ensure_ascii=False)
+        elif "DÉLÉGATION" in system:
+            text = json.dumps({"delegate": False,
+                               "reason": "Mock: étape considérée atomique."},
+                              ensure_ascii=False)
+        elif "COMPOSITION DE MÉTA-PROMPT" in system:
+            text = json.dumps({"needed": False, "meta_prompt": "",
+                               "reason": "Mock: prompt de base suffisant."},
+                              ensure_ascii=False)
+        elif "ENTRE-ÉTAPES" in system:
+            text = json.dumps({"use": "none", "name": None,
+                               "arguments": {}, "reason": "Mock: rien à déclencher."},
+                              ensure_ascii=False)
         else:  # EXÉCUTION
             text = json.dumps({
                 "result": f"(mock) Étape traitée : {user[:80]}",

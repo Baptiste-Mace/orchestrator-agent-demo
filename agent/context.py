@@ -15,9 +15,10 @@ class StepRecord:
     index: int
     step: str
     result: str
-    tool_used: str = "none"   # "none" | "skill:<nom>" | "mcp:<serveur>/<outil>"
+    tool_used: str = "none"   # "none" | "skill:<nom>" | "mcp:<serveur>/<outil>" | "sub-agent"
     files: List[str] = field(default_factory=list)
     notes: str = ""
+    meta_prompt: str = ""     # spécialisation injectée dans le prompt (si générée)
 
 
 @dataclass
@@ -40,6 +41,14 @@ class AgentContext:
 
     def budget_exhausted(self) -> bool:
         return self.tokens_used >= self.token_budget
+
+    def summary(self) -> str:
+        """Résumé compact de ce que l'agent a accompli (utile pour un sous-agent
+        qui doit rendre un résultat unique à son parent)."""
+        done = [r.result for r in self.history if r.result]
+        if not done:
+            return "(aucune étape aboutie)"
+        return " ".join(done)
 
     # --- enrichissement -------------------------------------------------------
     def record_step(self, record: StepRecord) -> None:
