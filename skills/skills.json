@@ -1,0 +1,14 @@
+{
+  "skills": [
+    {
+      "name": "summarize",
+      "description": "Résumer un texte long en quelques points clés concis.",
+      "prompt_file": "summarize.md"
+    },
+    {
+      "name": "outline_readme",
+      "description": "Produire le plan structuré d'un fichier README de projet.",
+      "prompt_file": "outline_readme.md"
+    }
+  ]
+}

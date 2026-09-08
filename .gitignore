@@ -1,0 +1,15 @@
+# Secrets et config locale (ne pas versionner)
+.env
+mcp_servers.json
+
+# Artefacts générés par l'agent
+workspace/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# macOS
+.DS_Store

@@ -1,0 +1,3 @@
+# Aucune dépendance : ce projet n'utilise que la bibliothèque standard de Python (3.9+).
+# Les serveurs MCP externes (ex: @modelcontextprotocol/server-filesystem) nécessitent
+# Node.js / npx, mais pas de paquet Python.
