@@ -54,7 +54,7 @@ TOOLS = [
             "properties": {
                 "url": {"type": "string", "description": "L'adresse de la page à lire"},
                 "max_chars": {"type": "integer",
-                              "description": "Longueur max du texte (défaut 3000)"},
+                              "description": "Longueur max du texte (défaut 10000)"},
             },
             "required": ["url"],
         },
@@ -122,7 +122,7 @@ def tool_web_fetch(args: dict) -> str:
     url = args.get("url", "").strip()
     if not url:
         return "URL vide."
-    max_chars = int(args.get("max_chars", 3000))
+    max_chars = int(args.get("max_chars", 10000))
 
     page = http_get(url)
     # On retire d'abord les blocs script/style (bruit non lisible).

@@ -83,8 +83,8 @@ class AgentContext:
                 # On conserve les données brutes récupérées (ex: résultats web),
                 # tronquées, pour que les étapes suivantes s'appuient sur du réel.
                 snippet = r.tool_output.strip()
-                if len(snippet) > 1500:
-                    snippet = snippet[:1500] + " […]"
+                if len(snippet) > 10000:
+                    snippet = snippet[:10000] + " […]"
                 lines.append(f"      → données récupérées:\n{snippet}")
             if r.notes:
                 lines.append(f"      → notes: {r.notes}")
