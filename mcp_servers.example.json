@@ -3,6 +3,10 @@
     "macos": {
       "command": "python3",
       "args": ["mcp_servers/macos_toolkit.py"]
+    },
+    "web": {
+      "command": "python3",
+      "args": ["mcp_servers/web_toolkit.py"]
     }
   }
 }

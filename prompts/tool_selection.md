@@ -12,6 +12,11 @@ On te donne :
 Pour un outil MCP, construis des "arguments" CORRECTS et COMPLETS en t'appuyant sur le
 CONTEXTE (ex: recopie le vrai texte produit à une étape précédente, pas un libellé vague).
 
+Cas particulier : si l'étape suppose des informations factuelles, récentes ou que tu ne
+connais pas de façon sûre, et qu'un outil de recherche web est disponible (web_search),
+utilise-le pour aller chercher la matière avant de rédiger. Son résultat enrichira le
+contexte de l'exécution.
+
 Réponds UNIQUEMENT avec un objet JSON, sans texte autour, au format :
 {
   "use": "none" | "skill" | "mcp",

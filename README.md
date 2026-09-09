@@ -154,6 +154,29 @@ python run.py "Raconte-moi une mini-histoire en trois parties : début, milieu, 
 C'est aussi un patron réutilisable : pour créer ton propre MCP, copie ce fichier,
 remplace la liste `TOOLS` et les `HANDLERS`, puis déclare-le dans `mcp_servers.json`.
 
+### MCP maison inclus : « Web Toolkit »
+
+`mcp_servers/web_toolkit.py` est un second serveur MCP maison (stdlib pure) qui donne à
+l'agent une fenêtre simple sur le web, sans clé API ni dépendance. La recherche passe
+par la version HTML de DuckDuckGo, qui se lit sans JavaScript ni clé (contrairement à la
+page Google).
+
+| Outil         | Effet                                                     |
+|---------------|-----------------------------------------------------------|
+| `web_search`  | Recherche web, renvoie titre / url / extrait des résultats |
+| `web_fetch`   | Télécharge une page et renvoie son texte (balises retirées) |
+
+Comme pour tout outil MCP, la sélection se fait **avant chaque étape**
+(`prompts/tool_selection.md`) : si une étape suppose des informations factuelles ou
+récentes, l'agent lance lui-même `web_search`, puis éventuellement `web_fetch` sur une
+url, et le résultat **enrichit le contexte** de l'exécution.
+
+```bash
+python run.py "Fais une courte fiche factuelle sur le protocole MCP : cherche des \
+sources à jour sur le web, puis résume en 5 points dans un fichier markdown"
+# -> étape 1 : mcp:web/web_search, étape 2 : mcp:web/web_fetch, puis rédaction
+```
+
 ## Structure
 
 ```
@@ -164,7 +187,8 @@ orchestrator-agent-demo/
 ├── skills/                 skills locales (registre + fichiers d'instructions)
 ├── mcp_servers.json        serveurs MCP à démarrer
 ├── mcp_servers/
-│   └── macos_toolkit.py    serveur MCP maison (notify/say/clipboard)
+│   ├── macos_toolkit.py    serveur MCP maison (notify/say/clipboard)
+│   └── web_toolkit.py      serveur MCP maison (web_search/web_fetch)
 └── agent/
     ├── config.py           réglages + chargement .env/prompts
     ├── llm.py              interface LLMProvider + OpenAI/Anthropic/Ollama/Mock
