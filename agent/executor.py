@@ -23,10 +23,12 @@ def execute_step(llm: LLMProvider, toolbox: Toolbox, ctx: AgentContext,
     ctx.add_tokens(sel_tokens)
 
     tool_block = ""
+    tool_output = ""
     if choice.kind == "skill":
         tool_block = f"\n\nSKILL À APPLIQUER:\n{choice.result}"
     elif choice.kind == "mcp":
         tool_block = f"\n\nRÉSULTAT DE L'OUTIL MCP ({choice.name}):\n{choice.result}"
+        tool_output = choice.result   # conservé dans le contexte pour la suite
 
     # 2) Méta-prompt composé à la volée : le prompt de base, enrichi si utile.
     system_prompt, specialisation, meta_tokens = compose_system_prompt(
@@ -61,4 +63,5 @@ def execute_step(llm: LLMProvider, toolbox: Toolbox, ctx: AgentContext,
         files=written,
         notes=data.get("notes", ""),
         meta_prompt=specialisation,
+        tool_output=tool_output,
     )

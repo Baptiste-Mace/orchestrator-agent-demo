@@ -19,6 +19,7 @@ class StepRecord:
     files: List[str] = field(default_factory=list)
     notes: str = ""
     meta_prompt: str = ""     # spécialisation injectée dans le prompt (si générée)
+    tool_output: str = ""     # sortie brute de l'outil (ex: résultats web) à conserver
 
 
 @dataclass
@@ -78,6 +79,13 @@ class AgentContext:
             lines.append(f"      → résultat: {r.result}")
             if r.tool_used != "none":
                 lines.append(f"      → outil: {r.tool_used}")
+            if r.tool_output:
+                # On conserve les données brutes récupérées (ex: résultats web),
+                # tronquées, pour que les étapes suivantes s'appuient sur du réel.
+                snippet = r.tool_output.strip()
+                if len(snippet) > 1500:
+                    snippet = snippet[:1500] + " […]"
+                lines.append(f"      → données récupérées:\n{snippet}")
             if r.notes:
                 lines.append(f"      → notes: {r.notes}")
 
