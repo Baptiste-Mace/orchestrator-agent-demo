@@ -125,13 +125,29 @@ def tool_web_fetch(args: dict) -> str:
     max_chars = int(args.get("max_chars", 3000))
 
     page = http_get(url)
-    # On retire d'abord les blocs script/style, puis toutes les balises.
+    # On retire d'abord les blocs script/style (bruit non lisible).
     page = re.sub(r"<(script|style)[^>]*>.*?</\1>", " ", page, flags=re.S | re.I)
-    text = strip_tags(page)
 
+    # Beaucoup de pages (accueils de journaux, blogs) mettent leurs titres dans
+    # des balises de titre h1..h3. Les extraire évite de ne capter que le menu de
+    # navigation quand on tronque une très longue page.
+    headings = []
+    for tag in ("h1", "h2", "h3"):
+        for frag in re.findall(rf"<{tag}[^>]*>(.*?)</{tag}>", page, re.S | re.I):
+            t = strip_tags(frag)
+            if t and t not in headings:
+                headings.append(t)
+
+    text = strip_tags(page)
     if len(text) > max_chars:
         text = text[:max_chars] + " […]"
-    return f"Contenu de {url} :\n\n{text}"
+
+    out = [f"Contenu de {url} :"]
+    if headings:
+        titles = "\n".join(f"- {h}" for h in headings[:20])
+        out.append(f"\nTITRES DÉTECTÉS (h1-h3) :\n{titles}")
+    out.append(f"\nTEXTE :\n{text}")
+    return "\n".join(out)
 
 
 HANDLERS = {
